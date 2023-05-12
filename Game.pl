@@ -2,7 +2,7 @@ startGame:-
 write("Do you want x or o?"), nl,
 read(Human),
 % Human player can be x or o but x is always MAX and o is MIN
-StartState = ['-','-','-','-','-','-','-','-','-'],
+StartState = ['#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#'],
 play([Human, StartState], Human).
 
 otherPlayer(x,o).
@@ -19,7 +19,7 @@ write('Enter your move\'s index'),nl,
 read(HumanMove),
 % Check that the move is valid
 % then replace in the board(using select & insert)
-nth0(HumanMove, State, '-', TmpList),
+nth0(HumanMove, State, '#', TmpList),
 nth0(HumanMove, NextState, Human, TmpList),
 otherPlayer(Human, Computer),
 play([Computer, NextState], Human).
@@ -39,22 +39,101 @@ isTerminal(State):-
 not(member('-', State)), write('It\'s a draw!'), nl.
 
 getWinner(State, Winner):-
-( (State = [Z,Z,Z,_,_,_,_,_,_], !);
-(State = [_,_,_,Z,Z,Z,_,_,_], !);
-(State = [_,_,_,_,_,_,Z,Z,Z], !);
-(State = [Z,_,_,Z,_,_,Z,_,_], !);
-(State = [_,Z,_,_,Z,_,_,Z,_], !);
-(State = [_,_,Z,_,_,Z,_,_,Z], !);
-(State = [Z,_,_,_,Z,_,_,_,Z], !);
-(State = [_,_,Z,_,Z,_,Z,_,_], !) ), Z \= '-', Winner = Z.
+check_sequence(State, Z), Winner = Z.
 	 
-draw([]):-!.
+check_sequence(List, Z) :-
+    % view the list as a 5x5 matrix
+    length(List, 25),
+    List = [A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y],
+    Matrix = [[A,B,C,D,E], [F,G,H,I,J], [K,L,M,N,O], [P,Q,R,S,T], [U,V,W,X,Y]],
+    % check for horizontal sequences
+    (((member([Z,Z,Z,Z,_], Matrix); member([_,Z,Z,Z,Z], Matrix)), Z \= '#');
+    % check for vertical sequences
+    (vertical(Matrix, Z));
+    % check for diagonal sequences
+    (diagonal(Matrix, Z))).
+	
+vertical(Lists, Z) :-
+    length(Lists, Len),
+    Len = 5,
+    nth0(0, Lists, L1),
+	nth0(1, Lists, L2),
+	nth0(2, Lists, L3),
+	nth0(3, Lists, L4),
+	nth0(4, Lists, L5),
+	((nth0(Index, L1, Z),
+	nth0(Index, L2, Z),
+	nth0(Index, L3, Z),
+	nth0(Index, L4, Z));
+	(nth0(Index, L5, Z),
+	nth0(Index, L2, Z),
+	nth0(Index, L3, Z),
+	nth0(Index, L4, Z))), Z \= '#'.
+	
+diagonal(Lists, Z) :-
+	length(Lists, Len),
+    Len = 5,
+    nth0(0, Lists, L1),
+	nth0(1, Lists, L2),
+	nth0(2, Lists, L3),
+	nth0(3, Lists, L4),
+	nth0(4, Lists, L5),
+	((nth0(0, L1, Z),
+	nth0(1, L2, Z),
+	nth0(2, L3, Z),
+	nth0(3, L4, Z));
+	(nth0(1, L2, Z),
+	nth0(2, L3, Z),
+	nth0(3, L4, Z),
+	nth0(4, L5, Z));
+	(nth0(0, L2, Z),
+	nth0(1, L3, Z),
+	nth0(2, L4, Z),
+	nth0(3, L5, Z));
+	(nth0(1, L1, Z),
+	nth0(2, L2, Z),
+	nth0(3, L3, Z),
+	nth0(4, L4, Z));
+	(nth0(4, L1, Z),
+	nth0(3, L2, Z),
+	nth0(2, L3, Z),
+	nth0(1, L4, Z));
+	(nth0(3, L1, Z),
+	nth0(2, L2, Z),
+	nth0(1, L3, Z),
+	nth0(0, L4, Z));
+	(nth0(4, L2, Z),
+	nth0(3, L3, Z),
+	nth0(2, L4, Z),
+	nth0(1, L5, Z));
+	(nth0(3, L2, Z),
+	nth0(2, L3, Z),
+	nth0(1, L4, Z),
+	nth0(0, L5, Z))), Z \= '#'.
+	
+draw(List) :-
+    % view the list as a 5x5 matrix
+    length(List, 25),
+    List = [A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y],
+    Matrix = [[A,B,C,D,E], [F,G,H,I,J], [K,L,M,N,O], [P,Q,R,S,T], [U,V,W,X,Y]],
+    % write the matrix row by row
+    write('------------------------'), nl,
+    write_row(Matrix, 1).
 
-draw([H|T]):-
-length(T, N),
-write(H),
-(0 is N mod 3 -> nl ; write(' ')),
-draw(T).
+write_row([], _).
+write_row([Row|Rest], N) :-
+    write(' | '),
+    write_elements(Row), nl,
+    write(' ------------------------'), nl,
+    N1 is N + 1,
+    write_row(Rest, N1).
+
+write_elements([]).
+write_elements([X|Xs]) :-
+    write(' '),
+    write(X),
+    write(' |'),
+    write_elements(Xs).
 
 
 alphabeta(Pos, Alpha, Beta, BestNextPos, Val):-
@@ -102,7 +181,7 @@ getMove([Player, State], Next).
 
 getMove([Player, State], [NextPlayer, NextState]):-
 otherPlayer(Player, NextPlayer),
-State = ['-'|T],
+State = ['#'|T],
 NextState = [Player|T].
 
 getMove([Player, State], [NextPlayer, NextState]):-
