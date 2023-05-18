@@ -1,13 +1,13 @@
 startGame:-
-write("Do you want x or o?"), nl,
+write("Do you want r or b?"), nl,
 read(Human),
 % Human player can be x or o but x is always MAX and o is MIN
 StartState = ['#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#'],
 play([Human, StartState], Human).
 
-otherPlayer(x,o).
+otherPlayer(r,b).
 
-otherPlayer(o,x).
+otherPlayer(b,r).
 
 play([_, State], _):-
 isTerminal(State), !,
@@ -15,7 +15,7 @@ nl, draw(State), nl.
 
 play([Human, State], Human):-
 !, nl, draw(State), nl,
-write('Enter your move\'s index'),nl,
+write('Enter your move\'s column'),nl,
 read(HumanMove),
 % Check that the move is valid
 % then replace in the board(using select & insert)
@@ -135,6 +135,44 @@ write_elements([X|Xs]) :-
     write(' |'),
     write_elements(Xs).
 
+insert(List, Column, Player, NewList):-
+	length(StartState, 25),
+	List = [A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y],
+    Matrix = [[A,B,C,D,E], [F,G,H,I,J], [K,L,M,N,O], [P,Q,R,S,T], [U,V,W,X,Y]],
+    nth0(0, Matrix, R1),
+	nth0(1, Matrix, R2),
+	nth0(2, Matrix, R3),
+	nth0(3, Matrix, R4),
+	nth0(4, Matrix, R5),
+	((nth0(Column, R5, '#') -> replace_hash(R5, Column, Player, NewR5),  NewMatrix = [R1, R2, R3, R4, NewR5]);
+	(nth0(Column, R4, '#') -> replace_hash(R4, Column, Player, NewR4),  NewMatrix = [R1, R2, R3, NewR4, R5]);
+	(nth0(Column, R3, '#') -> replace_hash(R3, Column, Player, NewR3),  NewMatrix = [R1, R2, NewR3, R4, R5]);
+	(nth0(Column, R2, '#') -> replace_hash(R2, Column, Player, NewR2),  NewMatrix = [R1, NewR2, R3, R4, R5]);
+	(nth0(Column, R1, '#') -> replace_hash(R1, Column, Player, NewR1),  NewMatrix = [NewR1, R2, R3, R4, R5] ; write("Insertion failed, full column"))),
+	flatten_matrix(NewMatrix, NewList).
+	
+% replace_hash(+List, +Index, +NewValue, -NewList)
+% replaces the element in `List` at index `Index` with `NewValue` if it is `#`,
+% and returns the resulting `NewList`. If the element is not `#`, the predicate fails.
+replace_hash(List, Index, NewValue, NewList) :-
+    nth0(Index, List, '#'),
+    replace_nth(Index, List, NewValue, NewList).
+
+% replace_nth(+Index, +List, +NewValue, -NewList)
+% replaces the element in `List` at index `Index` with `NewValue`, and returns the
+% resulting `NewList`.
+replace_nth(0, [_|Rest], Element, [Element|Rest]) :- !.
+replace_nth(Index, [First|Rest], Element, [First|NewRest]) :-
+    Index > 0,
+    NextIndex is Index - 1,
+    replace_nth(NextIndex, Rest, Element, NewRest).
+
+
+% flatten_matrix(+Matrix, -FlatList)
+% flattens the 5x5 matrix `Matrix` into a 25-element list `FlatList`.
+flatten_matrix(Matrix, FlatList) :-
+    append(Matrix, FlatMatrix),
+    flatten(FlatMatrix, FlatList).
 
 alphabeta(Pos, Alpha, Beta, BestNextPos, Val):-
 bagof(NextPos, move(Pos, NextPos), NextPosList),
