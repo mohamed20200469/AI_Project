@@ -1,7 +1,7 @@
 startGame:-
 write("Do you want r or b?"), nl,
 read(Human),
-% Human player can be x or o but x is always MAX and o is MIN
+% Human player can be r or b but r is always MAX and b is MIN
 StartState = ['#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#'],
 play([Human, StartState], Human).
 
@@ -17,30 +17,92 @@ play([Human, State], Human):-
 !, nl, draw(State), nl,
 write('Enter your move\'s column'),nl,
 read(HumanMove),
-% Check that the move is valid
-% then replace in the board(using select & insert)
-nth0(HumanMove, State, '#', TmpList),
-nth0(HumanMove, NextState, Human, TmpList),
+insert(State, HumanMove, Human, NextState),
 otherPlayer(Human, Computer),
 play([Computer, NextState], Human).
 
 play([Computer, State], Human):-
-nl, draw(State), nl,
-computerTurn([Computer,State], NextState),
-play(NextState, Human).
+    nl, draw(State), nl,
+    computerTurn([Computer,State], NextState),
+    play(NextState, Human).
 
-computerTurn(State, Next):-
-alphabeta(State, -100, 100, Next, _).
+	
+computerTurn(Pos, Next):-
+    alphabeta(Pos, -1000, 1000, Next, _, 5).
 
 isTerminal(State):-
 getWinner(State, Winner), write(Winner), write(' wins!'), nl, !.
 
 isTerminal(State):-
-not(member('-', State)), write('It\'s a draw!'), nl.
+not(member('#', State)), write('It\'s a draw!'), nl.
 
 getWinner(State, Winner):-
 check_sequence(State, Z), Winner = Z.
-	 
+
+alphabeta(Pos, Alpha, Beta, BestNextPos, Val, DepthLimit):-
+    DepthLimit =< 0, !,
+    utility(Pos, Val).
+
+alphabeta(Pos, Alpha, Beta, BestNextPos, Val, DepthLimit):-
+    DepthLimit > 0,
+    bagof(NextPos, move(Pos, NextPos), NextPosList),
+    NewDepthLimit is DepthLimit - 1,
+    best(NextPosList, Alpha, Beta, BestNextPos, Val, NewDepthLimit), !.
+
+best([Pos|_], Alpha, Beta, _, Val, DepthLimit):-
+    Beta =< Alpha, !,
+    (isMinPlayer(Pos) -> Val is Alpha ; Val is Beta).
+
+best([Pos], Alpha, Beta, Pos, Val, DepthLimit):-
+    alphabeta(Pos, Alpha, Beta, _, Val, DepthLimit), !.
+
+best([Pos1 | Tail], Alpha, Beta, BestPos, BestVal, DepthLimit) :-
+    alphabeta(Pos1, Alpha, Beta, _, Val1, DepthLimit),
+    updateValues(Pos1, Val1, Alpha, Beta, NewAlpha, NewBeta),
+    best(Tail, NewAlpha, NewBeta, Pos2, Val2, DepthLimit),
+    betterOf(Pos1, Val1, Pos2, Val2, BestPos, BestVal).
+
+updateValues(Pos1, Value, Alpha, Beta, NewAlpha, Beta):-
+    isMinPlayer(Pos1), !,
+    (Value > Alpha -> (NewAlpha is Value, !)
+    ; NewAlpha is Alpha).
+
+updateValues(_, Value, Alpha, Beta, Alpha, NewBeta):-
+    (Value < Beta -> (NewBeta is Value, !)
+    ; NewBeta is Beta).
+
+betterOf(Pos1, Val1, Pos2, Val2, BestPos, BestVal) :-
+    isMinPlayer(Pos1),
+    (Val1 >= Val2 -> (BestPos = Pos1, BestVal is Val1, !)
+    ; (BestPos = Pos2, BestVal is Val2)), !.
+
+betterOf(Pos1, Val1, Pos2, Val2, BestPos, BestVal) :-
+    (Val1 =< Val2 -> (BestPos = Pos1, BestVal is Val1, !)
+    ; (BestPos = Pos2, BestVal is Val2)), !.
+
+move([Player, State], Next):-
+    getMove([Player, State], Next).
+
+getMove([Player, State], [NextPlayer, NextState]):-
+    otherPlayer(Player, NextPlayer),
+    nth0(Index, State, '#'),
+    Column is Index mod 5,
+    insert(State, Column, Player, NextState).
+
+getMove([Player, State], [NextPlayer, NextState]):-
+    State = [H|T],
+    NextState = [H|NextT],
+    move([Player,T], [NextPlayer, NextT]).
+
+utility([_,State], Val):-
+    getWinner(State, Winner),!,
+    ((Winner = r, Val = 1, !);
+    (Winner = b, Val = -1, !)).
+
+utility(_,0).
+
+isMinPlayer([b,_]). % b is the next player
+
 check_sequence(List, Z) :-
     % view the list as a 5x5 matrix
     length(List, 25),
@@ -173,64 +235,3 @@ replace_nth(Index, [First|Rest], Element, [First|NewRest]) :-
 flatten_matrix(Matrix, FlatList) :-
     append(Matrix, FlatMatrix),
     flatten(FlatMatrix, FlatList).
-
-alphabeta(Pos, Alpha, Beta, BestNextPos, Val):-
-bagof(NextPos, move(Pos, NextPos), NextPosList),
-best(NextPosList, Alpha, Beta, BestNextPos, Val), !.
-alphabeta(Pos, _, _,_, Val):-
-utility(Pos, Val).
-best([Pos|_],Alpha, Beta, _, Val):-
-Beta =< Alpha, !,
-(isMinPlayer(Pos) -> Val is Alpha ; Val is Beta).
-
-best([Pos], Alpha, Beta, Pos, Val):-
-alphabeta(Pos, Alpha, Beta, _, Val), !.
-best([Pos1 | Tail], Alpha, Beta, BestPos, BestVal) :-
-alphabeta(Pos1, Alpha, Beta, _, Val1),
-updateValues(Pos1, Val1, Alpha, Beta, NewAlpha, NewBeta),
-best(Tail, NewAlpha, NewBeta, Pos2, Val2),
-betterOf(Pos1, Val1, Pos2, Val2, BestPos, BestVal).
-updateValues(Pos1, Value, Alpha, Beta, NewAlpha, Beta):-
-isMinPlayer(Pos1), !,
-(Value > Alpha -> (NewAlpha is Value, !)
-; NewAlpha is Alpha
-
-).
-updateValues(_, Value, Alpha, Beta, Alpha, NewBeta):-
-(Value < Beta -> (NewBeta is Value, !)
-; NewBeta is Beta
-
-).
-betterOf(Pos1, Val1, Pos2, Val2, BestPos, BestVal) :-
-isMinPlayer(Pos1),
-(Val1 >= Val2 -> (BestPos = Pos1, BestVal is Val1, !)
-; (BestPos = Pos2, BestVal is Val2)
-
-), !.
-betterOf(Pos1, Val1, Pos2, Val2, BestPos, BestVal) :-
-(Val1 =< Val2 -> (BestPos = Pos1, BestVal is Val1, !)
-; (BestPos = Pos2, BestVal is Val2)
-
-), !.
-
-move([Player, State], Next):-
-not(getWinner(State,_)),
-getMove([Player, State], Next).
-
-getMove([Player, State], [NextPlayer, NextState]):-
-otherPlayer(Player, NextPlayer),
-State = ['#'|T],
-NextState = [Player|T].
-
-getMove([Player, State], [NextPlayer, NextState]):-
-State = [H|T],
-NextState = [H|NextT],
-move([Player,T], [NextPlayer, NextT]).
-
-utility([_,State], Val):-
-getWinner(State, Winner),!,
-((Winner = x, Val = 1, !);
-(Winner = o, Val = -1, !)).
-
-utility(_,0).
-isMinPlayer([o,_]). % o is the next player
