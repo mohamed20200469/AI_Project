@@ -1,6 +1,15 @@
+:- dynamic difficulty/1.
+:- dynamic strategy/1.
+
 startGame:-
 write("Do you want r or b?"), nl,
 read(Human),
+write("Select the difficulty of the A.I. (1 to 6)"), nl,
+read(Diff),
+write("Select the Strategy of the A.I. (1 for minmax or 2 for alphabeta)"), nl,
+read(Strat),
+assertz(difficulty(Diff)),
+assertz(strategy(Strat)),
 % Human player can be r or b but r is always MAX and b is MIN
 StartState = ['#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#'],
 play([Human, StartState], Human).
@@ -23,12 +32,18 @@ play([Computer, NextState], Human).
 
 play([Computer, State], Human):-
     nl, draw(State), nl,
+	write("A.I. turn"), nl,
     computerTurn([Computer,State], NextState),
     play(NextState, Human).
 
 	
 computerTurn(Pos, Next):-
-    alphabeta(Pos, -1000, 1000, Next, _, 5).
+	difficulty(Diff),
+	strategy(Strat),
+    (
+		Strat == 2 -> alphabeta(Pos, -1000, 1000, Next, _, Diff);
+		Strat == 1 ->  minimax(Pos, Next, _, Diff)
+	).
 
 isTerminal(State):-
 getWinner(State, Winner), write(Winner), write(' wins!'), nl, !.
@@ -235,3 +250,22 @@ replace_nth(Index, [First|Rest], Element, [First|NewRest]) :-
 flatten_matrix(Matrix, FlatList) :-
     append(Matrix, FlatMatrix),
     flatten(FlatMatrix, FlatList).
+	
+
+minimax(Pos, _, Val, DepthLimit):-
+DepthLimit =< 0, !,
+utility(Pos, Val).
+
+minimax(Pos, BestNextPos, Val, DepthLimit):-
+DepthLimit > 0,
+bagof(NextPos, move(Pos, NextPos), NextPosList),
+NewDepthLimit is DepthLimit - 1,
+best(NextPosList, BestNextPos, Val, NewDepthLimit), !.
+
+best([Pos], Pos, Val, DepthLimit):-
+minimax(Pos, _, Val, DepthLimit), !.
+
+best([Pos1 | Tail], BestPos, BestVal, DepthLimit) :-
+minimax(Pos1, _, Val1, DepthLimit),
+best(Tail, Pos2, Val2, DepthLimit),
+betterOf(Pos1, Val1, Pos2, Val2, BestPos, BestVal).
