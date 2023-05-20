@@ -4,12 +4,12 @@
 startGame:-
 write("Do you want r or b?"), nl,
 read(Human),
-write("Select the difficulty of the A.I. (1 to 6)"), nl,
-read(Diff),
-write("Select the Strategy of the A.I. (1 for minmax or 2 for alphabeta)"), nl,
-read(Strat),
-assertz(difficulty(Diff)),
-assertz(strategy(Strat)),
+%write("Select the difficulty of the A.I. (1 to 6)"), nl,
+%read(Diff),
+%write("Select the Strategy of the A.I. (1 for minmax or 2 for alphabeta)"), nl,
+%read(Strat),
+%assertz(difficulty(Diff)),
+%assertz(strategy(Strat)),
 % Human player can be r or b but r is always MAX and b is MIN
 StartState = ['#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#'],
 play([Human, StartState], Human).
